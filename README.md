@@ -1,4 +1,4 @@
-# twng
+# twng a lighting async web frame
 packge have one pem file and one test file;
 ---
 test.js
