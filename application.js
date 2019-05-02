@@ -2,9 +2,6 @@ const HTTP = require("http2");
 const URL = require("url");
 const path = require("path");
 const fs = require("fs");
-const accepts = require('accepts');
-
-
 module.exports = class Application {
     constructor(server) {
         this.server = server;

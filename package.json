@@ -1,6 +1,6 @@
 {
-  "name": "tng",
-  "version": "1.0.0",
+  "name": "twng",
+  "version": "0.0.9",
   "description": "",
   "main": "application.js",
   "scripts": {
@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/tungyao/tng.git"
+    "url": "git@github.com:tungyao/twng.git"
   },
   "keywords": [
     "web"
@@ -16,7 +16,7 @@
   "author": "tungyao",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/tungyao/tng/issues"
+    "url": "https://github.com/tungyao/twng/issues"
   },
-  "homepage": "https://github.com/tungyao/tng#readme"
+  "homepage": "https://github.com/tungyao/twng#readme"
 }
