@@ -34,7 +34,6 @@ module.exports = class Application {
             if (typeof fn !== 'function') throw new TypeError('Middleware must be composed of functions!')
         }
         return function (context, next) {
-            // last called middleware #
             let index = -1;
             return dispatch(0);
 
@@ -54,33 +53,6 @@ module.exports = class Application {
             }
         }
     }
-
-    // compose(index) {
-    //     for (let fn of index) {
-    //         if (typeof fn !== "function") throw  new TypeError("it's not a function")
-    //     }
-    //     return function (context, next) {
-    //         // last called middleware #
-    //         let tindex = -1;
-    //         return dispatch(0);
-    //
-    //         function dispatch(i) {
-    //             if (i <= tindex) return Promise.reject(new Error('next() called multiple times'));
-    //             tindex = i;
-    //             let fn = index[i];
-    //             if (i === index.length) fn = next;
-    //             if (!fn) return Promise.resolve();
-    //             try {
-    //                 return Promise.resolve(fn(context, function next() {
-    //                     return dispatch(i + 1)
-    //                 }))
-    //             } catch (err) {
-    //                 return Promise.reject(err)
-    //             }
-    //         }
-    //     }
-    // }
-
     respond(ctx) {
         if (false === ctx.respond) return;
         const res = ctx.res;
@@ -100,7 +72,6 @@ module.exports = class Application {
             }
             return res.end(body);
         }
-        // console.log(body);
         if (Buffer.isBuffer(body)) {
             return res.end(body);
         }
@@ -124,9 +95,6 @@ module.exports = class Application {
         const fn = this.compose(this.index);
         return (stream, header) => {
             const ctx = this.createContext(stream, header);
-            // stream.on("data", chunk => {
-            //
-            // });
             fn(ctx).then(() => this.respond(ctx));
         }
     }
@@ -137,7 +105,6 @@ module.exports = class Application {
         context.on  = stream.on;
         context.res.respond = stream.respond;
         context.respond = stream.respond;
-        // console.log(context.respond);
         context.body = "";
         context.querystring = this.querystring(header[":path"]);
         context.method = header[":method"];
@@ -168,7 +135,6 @@ module.exports = class Application {
 
     use(fn) {
         if (typeof fn !== "function") throw new TypeError("it's not a function");
-        // this.server.on("stream", fn);
         if (!this.isFunction(fn)) {
             return new TypeError("not a function")
         }
