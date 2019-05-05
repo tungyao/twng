@@ -13,7 +13,7 @@ module.exports = class Application {
         this.server = HTTP.createSecureServer({
             key: key,
             cert: cert
-        }).on("stream", this.callback());
+        }).on("stream", this.callback())
     }
 
     creatServer() {
@@ -22,26 +22,27 @@ module.exports = class Application {
 
     listen(port = 403) {
         const server = this.server || HTTP.createServer();
-        this.server.on("error", err => {
+        server.on("error", err => {
             console.log(err);
         });
         return server.listen(port);
     }
 
-    compose(index) {
-        for (let fn of index) {
-            if (typeof fn !== "function") throw  new TypeError("it's not a function")
+    compose(middleware) {
+        if (!Array.isArray(middleware)) throw new TypeError('Middleware stack must be an array!');
+        for (const fn of middleware) {
+            if (typeof fn !== 'function') throw new TypeError('Middleware must be composed of functions!')
         }
         return function (context, next) {
             // last called middleware #
-            let tindex = -1;
+            let index = -1;
             return dispatch(0);
 
             function dispatch(i) {
-                if (i <= tindex) return Promise.reject(new Error('next() called multiple times'));
-                tindex = i;
-                let fn = index[i];
-                if (i === index.length) fn = next;
+                if (i <= index) return Promise.reject(new Error('next() called multiple times'));
+                index = i;
+                let fn = middleware[i];
+                if (i === middleware.length) fn = next;
                 if (!fn) return Promise.resolve();
                 try {
                     return Promise.resolve(fn(context, function next() {
@@ -54,10 +55,35 @@ module.exports = class Application {
         }
     }
 
+    // compose(index) {
+    //     for (let fn of index) {
+    //         if (typeof fn !== "function") throw  new TypeError("it's not a function")
+    //     }
+    //     return function (context, next) {
+    //         // last called middleware #
+    //         let tindex = -1;
+    //         return dispatch(0);
+    //
+    //         function dispatch(i) {
+    //             if (i <= tindex) return Promise.reject(new Error('next() called multiple times'));
+    //             tindex = i;
+    //             let fn = index[i];
+    //             if (i === index.length) fn = next;
+    //             if (!fn) return Promise.resolve();
+    //             try {
+    //                 return Promise.resolve(fn(context, function next() {
+    //                     return dispatch(i + 1)
+    //                 }))
+    //             } catch (err) {
+    //                 return Promise.reject(err)
+    //             }
+    //         }
+    //     }
+    // }
+
     respond(ctx) {
         if (false === ctx.respond) return;
-        const res = ctx.res; //server
-        // if (!ctx.writable) return;
+        const res = ctx.res;
         let body = ctx.body;
         const code = ctx.status;
         if ('HEAD' === ctx.method) {
@@ -74,17 +100,13 @@ module.exports = class Application {
             }
             return res.end(body);
         }
+        // console.log(body);
         if (Buffer.isBuffer(body)) {
-            // console.log(1);
-            // res.respond({
-            //     "content-type":"image/jpeg"
-            // });
-            // res.respond();
             return res.end(body);
         }
         if ("string" === typeof body) {
             res.respond({
-                "content-type":"text/html"
+                "content-type": "text/html"
             });
             return res.end(body);
         }
@@ -101,20 +123,21 @@ module.exports = class Application {
     callback() {
         const fn = this.compose(this.index);
         return (stream, header) => {
-            // console.log(header.statusCode);
-            // stream.statusCode = 404;
             const ctx = this.createContext(stream, header);
-            // const onerror = err => ctx.onerror(err);
+            // stream.on("data", chunk => {
+            //
+            // });
             fn(ctx).then(() => this.respond(ctx));
         }
     }
 
     createContext(stream, header) {
         const context = Object;
-        console.log(stream);
         context.res = stream;
+        context.on  = stream.on;
         context.res.respond = stream.respond;
         context.respond = stream.respond;
+        // console.log(context.respond);
         context.body = "";
         context.querystring = this.querystring(header[":path"]);
         context.method = header[":method"];
@@ -123,7 +146,6 @@ module.exports = class Application {
         context.schema = header[":schema"];
         context.user_agent = header["user-agent"];
         context.accept = header["accept-agent"];
-
         return context;
     }
 
@@ -132,8 +154,8 @@ module.exports = class Application {
         return query.query;
     }
 
-    onerror(err) {
-        console.log(err);
+    onerror() {
+        this.server.on("error", err => console.log(err))
     }
 
     isJSON(body) {
@@ -147,7 +169,28 @@ module.exports = class Application {
     use(fn) {
         if (typeof fn !== "function") throw new TypeError("it's not a function");
         // this.server.on("stream", fn);
+        if (!this.isFunction(fn)) {
+            return new TypeError("not a function")
+        }
         this.index.push(fn);
         return this;
+    }
+
+    isFunction(fn) {
+        let isFnRegex = /^\s*(?:function)?\*/;
+        let toStr = Object.prototype.toString;
+        let fnToStr = Function.prototype.toString;
+        let hasToStringTag = typeof Symbol === 'function' && typeof Symbol.toStringTag === 'symbol';
+        if (typeof fn !== 'function') {
+            return false;
+        }
+        if (isFnRegex.test(fnToStr.call(fn))) {
+            return true;
+        }
+        if (!hasToStringTag) {
+            let str = toStr.call(fn);
+            return str === '[object GeneratorFunction]';
+        }
+        return true;
     }
 };
