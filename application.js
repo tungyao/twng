@@ -53,6 +53,7 @@ module.exports = class Application {
             }
         }
     }
+
     respond(ctx) {
         if (false === ctx.respond) return;
         const res = ctx.res;
@@ -77,7 +78,9 @@ module.exports = class Application {
         }
         if ("string" === typeof body) {
             res.respond({
-                "content-type": "text/html"
+                "content-type": ctx.contentType || "text/html;charset=utf-8",
+                ":status": ctx.status,
+                ...ctx.redirectPath
             });
             return res.end(body);
         }
@@ -101,10 +104,17 @@ module.exports = class Application {
 
     createContext(stream, header) {
         const context = Object;
+        context.id = stream.id;
         context.res = stream;
-        context.on  = stream.on;
+        context.on = stream.on;
+        context.contentType = "";
+        context.status = 200;
         context.res.respond = stream.respond;
         context.respond = stream.respond;
+        context.redirectPath = {};
+        context.redirect = url => {
+            context.redirectPath = {"Location": url, ":status": 301}
+        }
         context.body = "";
         context.querystring = this.querystring(header[":path"]);
         context.method = header[":method"];
@@ -116,9 +126,30 @@ module.exports = class Application {
         return context;
     }
 
+    redirect(url, alt) {
+        // location
+        if ('back' == url) url = this.ctx.get('Referrer') || alt || '/';
+        this.set('Location', url);
+
+        // status
+        if (!statuses.redirect[this.status]) this.status = 302;
+
+        // html
+        if (this.ctx.accepts('html')) {
+            url = escape(url);
+            this.type = 'text/html; charset=utf-8';
+            this.body = `Redirecting to <a href="${url}">${url}</a>.`;
+            return;
+        }
+
+        // text
+        this.type = 'text/plain; charset=utf-8';
+        this.body = `Redirecting to ${url}.`;
+    }
+
     querystring(url) {
         const query = URL.parse(url, true);
-        return query.query;
+        return query;
     }
 
     onerror() {
